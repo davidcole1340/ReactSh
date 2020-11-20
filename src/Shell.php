@@ -23,6 +23,13 @@ class Shell
 
         $this->stdio->setPrompt('>> ');
         $this->stdio->on('data', [$this, 'handleData']);
+        $this->stdio->setAutocomplete(function () {
+            return [
+                'quit',
+                'exit',
+                'clear',
+            ];
+        });
     }
 
     public function handleError($errno, $errstr, $errfile, $errline)
@@ -36,7 +43,8 @@ class Shell
         $all = $this->stdio->listHistory();
     
         switch ($line) {
-            case 'exit';
+            case 'exit':
+            case 'quit':
                 $this->stdio->write('Goodbye'.PHP_EOL);
                 return $this->stdio->end();
             case 'clear':
