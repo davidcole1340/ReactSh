@@ -23,3 +23,11 @@ $yourOtherProcess->on('ready', function () use ($shell) {
 
 $loop->run();
 ```
+
+## License
+
+GNU GPLv3. See [LICENSE](LICENSE).
+
+## Credits
+
+- [David Cole](mailto:david.cole1340@gmail.com)
