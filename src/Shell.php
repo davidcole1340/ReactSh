@@ -23,10 +23,11 @@ class Shell
 
         $this->stdio->setPrompt('>> ');
         $this->stdio->on('data', [$this, 'handleData']);
+    }
 
-        // set_error_handler(function ($errno, $errstr, $errfile, $errline) {
-        //     throw new \Exception($errstr, $errno);
-        // });
+    public function handleError($errno, $errstr, $errfile, $errline)
+    {
+        throw new \Exception($errstr, $errno);
     }
 
     public function handleData($line)
@@ -44,7 +45,9 @@ class Shell
         }
     
         if (empty($line)) return;
-    
+        
+        set_error_handler([$this, 'handleError']);
+
         try {
             unset($this->scope['_'], $this->scope['line']);
             extract($this->scope);
@@ -57,7 +60,11 @@ class Shell
             if ($line !== end($all)) {
                 $this->stdio->addHistory($line);
             }
+
+            restore_error_handler();
         } catch (\Throwable $e) {
+            restore_error_handler();
+
             if (strpos($e->getMessage(), 'unexpected end of file') !== false) {
                 $this->handleData($line.';');
             } else {
