@@ -1,11 +1,15 @@
 {
+    "name": "davidcole1340/reactsh",
+    "description": "ReactPHP REPL",
+    "authors": [
+        {
+            "name": "David Cole",
+            "email": "david.cole1340@gmail.com"
+        }
+    ],
     "require": {
-        "team-reflex/discord-php": "dev-master",
         "clue/stdio-react": "^2.3",
-        "psy/psysh": "^0.10.4",
-        "symfony/var-dumper": "^5.1",
-        "symfony/var-exporter": "^5.1",
-        "wyrihaximus/react-stdio-symfony-console": "^1.0"
+        "symfony/var-dumper": "^5.1"
     },
     "autoload": {
         "psr-4": {
