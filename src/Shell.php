@@ -28,6 +28,7 @@ class Shell
                 'quit',
                 'exit',
                 'clear',
+                'ls',
             ];
         });
     }
@@ -46,9 +47,17 @@ class Shell
             case 'exit':
             case 'quit':
                 $this->stdio->write('Goodbye'.PHP_EOL);
-                return $this->stdio->end();
+                $this->stdio->end();
+                return $this->loop->stop();
             case 'clear':
                 system('clear');
+                return;
+            case 'ls':
+                foreach (array_keys($this->scope) as $var) {
+                    $this->stdio->write('$'.$var.' ');
+                }
+
+                $this->stdio->write(PHP_EOL);
                 return;
         }
     
@@ -57,10 +66,16 @@ class Shell
         set_error_handler([$this, 'handleError']);
 
         try {
-            unset($this->scope['_'], $this->scope['line']);
-            extract($this->scope);
-            eval('$_ = '.$line);
-            $this->scope = get_defined_vars();
+            $_ = (function ($line) {
+                $_ = null;
+                
+                extract($this->scope);
+                eval('$_ = '.$line);
+                $this->scope = get_defined_vars();
+                unset($this->scope['line']);
+
+                return $_;
+            })($line);
     
             $context = $this->dumper->dump($this->cloner->cloneVar($_), true);
             $this->stdio->write('=> '.$context);
