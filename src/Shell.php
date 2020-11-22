@@ -38,7 +38,7 @@ class Shell
         throw new \Exception($errstr, $errno);
     }
 
-    public function handleData($line)
+    public function handleData($line, $first = true)
     {
         $line = rtrim($line);
         $all = $this->stdio->listHistory();
@@ -62,6 +62,10 @@ class Shell
         }
     
         if (empty($line)) return;
+
+        if ($first) {
+            $this->stdio->addHistory($line);
+        }
         
         set_error_handler([$this, 'handleError']);
 
@@ -79,19 +83,15 @@ class Shell
     
             $context = $this->dumper->dump($this->cloner->cloneVar($_), true);
             $this->stdio->write('=> '.$context);
-            
-            if ($line !== end($all)) {
-                $this->stdio->addHistory($line);
-            }
 
             restore_error_handler();
         } catch (\Throwable $e) {
             restore_error_handler();
 
             if (strpos($e->getMessage(), 'unexpected end of file') !== false) {
-                $this->handleData($line.';');
+                $this->handleData($line.';', false);
             } else {
-                $this->stdio->write($e->getMessage().PHP_EOL.$e->getTraceAsString());
+                $this->stdio->write($e->getMessage().PHP_EOL.$e->getTraceAsString().PHP_EOL);
             }
         }
     }
