@@ -96,6 +96,11 @@ class Shell
         }
     }
 
+    public function getStdio()
+    {
+        return $this->stdio;
+    }
+
     public function setScope(array $scope)
     {
         $this->scope = $scope;
