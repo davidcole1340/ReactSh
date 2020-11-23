@@ -10,6 +10,8 @@ use Symfony\Component\VarDumper\Dumper\CliDumper;
 
 class Shell
 {
+    private $cloner;
+    private $dumper;
     private $loop;
     private $stdio;
     private $scope = [];
@@ -20,6 +22,7 @@ class Shell
         $this->stdio = new Stdio($this->loop);
         $this->cloner = new VarCloner();
         $this->dumper = new CliDumper();
+        $this->cloner->setMaxItems(5);
 
         $this->stdio->setPrompt('>> ');
         $this->stdio->on('data', [$this, 'handleData']);
@@ -29,19 +32,22 @@ class Shell
                 'exit',
                 'clear',
                 'ls',
+                'await',
             ];
         });
     }
 
     public function handleError($errno, $errstr, $errfile, $errline)
-    {
-        throw new \Exception($errstr, $errno);
+    {  
+        // supress warnings not in error reporting 
+        if (! (error_reporting() & $errno)) return;
+
+        throw new \ErrorException($errstr, 0, $errno, $errfile, $errline);
     }
 
     public function handleData($line, $first = true)
     {
         $line = rtrim($line);
-        $all = $this->stdio->listHistory();
     
         switch ($line) {
             case 'exit':
@@ -67,29 +73,54 @@ class Shell
             $this->stdio->addHistory($line);
         }
         
+        $await = false;
         set_error_handler([$this, 'handleError']);
 
         try {
-            $_ = (function ($line) {
-                $_ = null;
-                
-                extract($this->scope);
-                eval('$_ = '.$line);
-                $this->scope = get_defined_vars();
-                unset($this->scope['line']);
+            $args = explode(' ', $line);
+            
+            if (array_shift($args) == 'await') {
+                $await = true;
+                $line = implode($args);
 
-                return $_;
-            })($line);
+                $_ = (function ($line) {
+                    $_ = null;
+
+                    extract($this->scope);
+                    eval('$_prom = '.$line);
+                    $_prom->done(function ($result) use (&$_) {
+                        $_ = $result;
+                        $this->scope = array_merge($this->scope, get_defined_vars());
+                        unset($this->scope['line']);
+
+                        $context = $this->dumper->dump($this->cloner->cloneVar($_), true);
+                        $this->stdio->write('=> '.$context);
+
+                        restore_error_handler();
+                    });
+                })($line);
+            } else {
+                $_ = (function ($line) {
+                    $_ = null;
+                    
+                    extract($this->scope);
+                    eval('$_ = '.$line);
+                    $this->scope = get_defined_vars();
+                    unset($this->scope['line']);
     
-            $context = $this->dumper->dump($this->cloner->cloneVar($_), true);
-            $this->stdio->write('=> '.$context);
+                    return $_;
+                })($line);
+        
+                $context = $this->dumper->dump($this->cloner->cloneVar($_), true);
+                $this->stdio->write('=> '.$context);
 
-            restore_error_handler();
+                restore_error_handler();
+            }
         } catch (\Throwable $e) {
             restore_error_handler();
 
             if (strpos($e->getMessage(), 'unexpected end of file') !== false) {
-                $this->handleData($line.';', false);
+                $this->handleData(($await ? 'await ' : '') . $line.';', false);
             } else {
                 $this->stdio->write($e->getMessage().PHP_EOL.$e->getTraceAsString().PHP_EOL);
             }
