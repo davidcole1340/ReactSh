@@ -26,7 +26,7 @@ $loop->run();
 
 ## License
 
-GNU GPLv3. See [LICENSE](LICENSE).
+MIT License. See [LICENSE](LICENSE).
 
 ## Credits
 
